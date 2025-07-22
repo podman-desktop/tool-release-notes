@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "strict": true,
+    "resolveJsonModule": true,
+    "preserveValueImports": false,
+    "baseUrl": ".",
+    "paths": {
+      "/@/*": ["./src/*"],
+      "/@api/*": ["../api/src/*"]
+    },
+    "allowJs": true,
+    "checkJs": true,
+    "types": ["@testing-library/jest-dom"]
+  },
+  "include": [
+    "release-notes/*.ts",
+    "types/*.d.ts",
+  ]
+}
