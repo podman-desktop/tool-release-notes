@@ -6,10 +6,6 @@
     "resolveJsonModule": true,
     "preserveValueImports": false,
     "baseUrl": ".",
-    "paths": {
-      "/@/*": ["./src/*"],
-      "/@api/*": ["../api/src/*"]
-    },
     "allowJs": true,
     "checkJs": true,
     "types": ["@testing-library/jest-dom"]
