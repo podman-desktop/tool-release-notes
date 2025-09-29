@@ -19,11 +19,17 @@
 import * as fsOriginal from 'node:fs';
 
 import type { components } from '@octokit/openapi-types';
-import { Octokit } from '@octokit/rest';
+import { Octokit, RestEndpointMethodTypes } from '@octokit/rest';
 import mustache from 'mustache';
-import { beforeEach,describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { type HighlightedPR, type PRCategory, type PRInfo,ReleaseNotesPreparator} from './release-notes-preparator';
+import {
+  type HighlightedPR,
+  KeyValueNumber,
+  type PRCategory,
+  type PRInfo,
+  ReleaseNotesPreparator,
+} from './release-notes-preparator';
 
 type Issue = components['schemas']['issue'];
 type Milestone = components['schemas']['milestone'];
@@ -36,11 +42,15 @@ export class TestReleaseNotesPreparator extends ReleaseNotesPreparator {
     return super.generateMD(changelog, firstTimeContributors, highlighted);
   }
 
-  getMilestonePRs(prs: Issue[]): Promise<{ [key: string]: number }> {
+  getMilestonePRs(prs: Issue[]): Promise<KeyValueNumber> {
     return super.getMilestonePRs(prs);
   }
 
-  isNewContributor(username: string, contributorsMap, milestoneCommits): Promise<boolean> {
+  isNewContributor(
+    username: string,
+    contributorsMap: KeyValueNumber,
+    milestoneCommits: KeyValueNumber,
+  ): Promise<boolean> {
     return super.isNewContributor(username, contributorsMap, milestoneCommits);
   }
 
@@ -116,7 +126,7 @@ function createMockContributor(login: string, contributions: number): Contributo
     html_url: `https://github.com/${login}`,
     type: 'User',
     contributions,
-  };
+  } as unknown as Contributor;
 }
 
 function createMockMilestone(id: number, title: string, number: number): Milestone {
@@ -129,7 +139,6 @@ function createMockMilestone(id: number, title: string, number: number): Milesto
   } as unknown as Milestone;
 }
 
-let mockOctokitInstance;
 let preparator: TestReleaseNotesPreparator;
 const mockToken = 'test-token';
 const mockOrg = 'test-org';
@@ -140,19 +149,20 @@ const mockModel = 'test-model';
 const mockPort = '12345';
 const mockEndpoint = '/api/test';
 
+const mockOctokitInstance: Octokit = {
+  rest: {
+    issues: { listMilestones: vi.fn(), listForRepo: vi.fn(), get: vi.fn() },
+    repos: { listContributors: vi.fn() },
+  },
+  issues: {
+    get: vi.fn(),
+  },
+} as unknown as Octokit;
+
+vi.mocked(Octokit).mockImplementation(() => mockOctokitInstance);
+
 beforeEach(() => {
   vi.clearAllMocks();
-
-  mockOctokitInstance = {
-    rest: {
-      issues: { listMilestones: vi.fn(), listForRepo: vi.fn(), get: vi.fn() },
-      repos: { listContributors: vi.fn() },
-    },
-    issues: {
-      get: vi.fn(),
-    },
-  };
-  vi.mocked(Octokit).mockImplementation(() => mockOctokitInstance);
 
   preparator = new TestReleaseNotesPreparator(
     mockToken,
@@ -183,7 +193,9 @@ describe('ReleaseNotesPreparator', () => {
   describe('getPRsByMilestone', () => {
     test('should fetch and filter PRs for a given milestone', async () => {
       const milestone1: Milestone = createMockMilestone(1, mockMilestoneName, 1);
-      mockOctokitInstance.rest.issues.listMilestones.mockResolvedValue({ data: [milestone1] });
+      vi.mocked(mockOctokitInstance.rest.issues.listMilestones).mockResolvedValue({
+        data: [milestone1],
+      } as unknown as RestEndpointMethodTypes['issues']['listMilestones']['response']);
       const pr1 = createMockIssue(
         101,
         'feat: New feature',
@@ -204,15 +216,19 @@ describe('ReleaseNotesPreparator', () => {
         'body',
         'User',
       );
-      mockOctokitInstance.rest.issues.listForRepo
-        .mockResolvedValue({ data: [] })
-        .mockResolvedValueOnce({ data: [pr1, pr2] });
+      vi.mocked(mockOctokitInstance.rest.issues.listForRepo)
+        .mockResolvedValue({ data: [] } as unknown as RestEndpointMethodTypes['issues']['listForRepo']['response'])
+        .mockResolvedValueOnce({
+          data: [pr1, pr2],
+        } as unknown as RestEndpointMethodTypes['issues']['listForRepo']['response']);
       const prs = await preparator.getPRsByMilestone(mockOrg, mockRepo, mockMilestoneName);
       expect(prs).toEqual([pr1, pr2]);
     });
 
     test('should throw an error if milestone is not found', async () => {
-      mockOctokitInstance.rest.issues.listMilestones.mockResolvedValue({ data: [] });
+      vi.mocked(mockOctokitInstance.rest.issues.listMilestones).mockResolvedValue({
+        data: [],
+      } as unknown as RestEndpointMethodTypes['issues']['listMilestones']['response']);
       await expect(preparator.getPRsByMilestone(mockOrg, mockRepo, 'non-existent')).rejects.toThrow(
         /Milestone 'non-existent' was not found/,
       );
@@ -224,10 +240,10 @@ describe('ReleaseNotesPreparator', () => {
       const prNew1 = createMockIssue(201, 'feat: First PR', 'newUser', 'urlNew', 'htmlNew', '2023-02-01T10:00:00Z');
       const prNew2 = createMockIssue(202, 'fix: Older PR', 'newUser', 'urlNew', 'htmlNew', '2023-02-01T09:00:00Z');
 
-      mockOctokitInstance.rest.repos.listContributors.mockResolvedValue({
+      vi.mocked(mockOctokitInstance.rest.repos.listContributors).mockResolvedValue({
         data: [createMockContributor('newUser', 2)],
-      });
-      vi.spyOn(preparator, 'getMilestonePRs' as unknown).mockResolvedValue({ newUser: 2 });
+      } as unknown as RestEndpointMethodTypes['repos']['listContributors']['response']);
+      vi.spyOn(preparator, 'getMilestonePRs').mockResolvedValue({ newUser: 2 });
       const firstTimers = await preparator.getFirstTimeContributors([prNew2, prNew1]);
       expect(firstTimers).toHaveLength(1);
       expect(firstTimers[0].author.username).toBe('newUser');
@@ -258,7 +274,9 @@ describe('ReleaseNotesPreparator', () => {
     test('should prepend issue body if "Closes #issueNum" found', async () => {
       const pr = createMockIssue(401, 'feat: X', 'userX', 'urlX', 'htmlX', '2023-04-01Z', 'Closes #123. PR body.');
       const linkedIssue = createMockIssue(123, 'Linked', 'userY', 'urlY', 'htmlY', '2023-03-01Z', 'Issue body.');
-      mockOctokitInstance.issues.get.mockResolvedValue({ data: linkedIssue });
+      vi.mocked(mockOctokitInstance.issues.get).mockResolvedValue({
+        data: linkedIssue,
+      } as unknown as RestEndpointMethodTypes['issues']['get']['response']);
       const updatedPr = await preparator.includeDataFromIssue(mockOrg, mockRepo, pr);
       expect(updatedPr.body).toBe('Issue body.Closes #123. PR body.');
     });
@@ -266,7 +284,9 @@ describe('ReleaseNotesPreparator', () => {
     test('should prepend issue body if "Fixes #issueNum" found', async () => {
       const pr = createMockIssue(401, 'feat: X', 'userX', 'urlX', 'htmlX', '2023-04-01Z', 'Fixes #123. PR body.');
       const linkedIssue = createMockIssue(123, 'Linked', 'userY', 'urlY', 'htmlY', '2023-03-01Z', 'Issue body.');
-      mockOctokitInstance.issues.get.mockResolvedValue({ data: linkedIssue });
+      vi.mocked(mockOctokitInstance.issues.get).mockResolvedValue({
+        data: linkedIssue,
+      } as unknown as RestEndpointMethodTypes['issues']['get']['response']);
       const updatedPr = await preparator.includeDataFromIssue(mockOrg, mockRepo, pr);
       expect(updatedPr.body).toBe('Issue body.Fixes #123. PR body.');
     });
@@ -274,7 +294,9 @@ describe('ReleaseNotesPreparator', () => {
     test('should not update issue body if "Closes #issueNum" is not found', async () => {
       const pr = createMockIssue(401, 'feat: X', 'userX', 'urlX', 'htmlX', '2023-04-01Z', 'ABCD PR body.');
       const linkedIssue = createMockIssue(123, 'Linked', 'userY', 'urlY', 'htmlY', '2023-03-01Z', 'Issue body.');
-      mockOctokitInstance.rest.issues.get.mockResolvedValue({ data: linkedIssue });
+      vi.mocked(mockOctokitInstance.issues.get).mockResolvedValue({
+        data: linkedIssue,
+      } as unknown as RestEndpointMethodTypes['issues']['get']['response']);
       const updatedPr = await preparator.includeDataFromIssue(mockOrg, mockRepo, pr);
       expect(updatedPr.body).toBe('ABCD PR body.');
     });
