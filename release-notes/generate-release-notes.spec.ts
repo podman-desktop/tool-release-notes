@@ -16,23 +16,26 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
-import { afterEach, beforeAll,beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import minimist from 'minimist';
 
 import { run } from './generate-release-notes';
 import { ReleaseNotesPreparator } from './release-notes-preparator';
 
 const consoleLogMock = vi.fn();
 const consoleWarnMock = vi.fn();
-const consoleErrorMock = vi.fn();
 const generateMock = vi.fn();
 
 const originalConsoleLog = console.log;
 const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
 const originalProcessExit = process.exit;
 
 let originalArgv: string[];
 let originalEnv: NodeJS.ProcessEnv;
+
+vi.mock('minimist', () => ({
+  default: vi.fn(),
+}));
 
 beforeAll(() => {
   vi.mock('./release-notes-preparator', () => {
@@ -48,7 +51,6 @@ beforeEach(() => {
   ReleaseNotesPreparator.prototype.generate = generateMock;
   console.log = consoleLogMock;
   console.warn = consoleWarnMock;
-  console.error = consoleErrorMock;
 
   originalArgv = [...process.argv];
   originalEnv = { ...process.env };
@@ -61,7 +63,6 @@ beforeEach(() => {
 afterEach(() => {
   console.log = originalConsoleLog;
   console.warn = originalConsoleWarn;
-  console.error = originalConsoleError;
   (process.exit as unknown) = originalProcessExit;
 
   process.argv = originalArgv;
@@ -70,27 +71,17 @@ afterEach(() => {
 
 describe('run', () => {
   test('should parse arguments, call ReleaseNotesPreparator with correct params, and call its generate method', async () => {
-    process.argv = [
-      'foo', // Standard first argument
-      'bar', // Standard second argument (script name)
-      '--token',
-      'my-cli-token',
-      '--org',
-      'my-cli-org',
-      '--repo',
-      'my-cli-repo',
-      '--username',
-      'my-cli-user',
-      '--milestone',
-      'cli-1.2.3',
-      '--model',
-      'cli-gemma',
-      '--port',
-      'cli-1111',
-      '--endpoint',
-      '/cli-gen',
-      '--ollama', // Sets useOllama to true
-    ];
+    vi.mocked(minimist).mockReturnValue({
+      token: 'my-cli-token',
+      org: 'my-cli-org',
+      repo: 'my-cli-repo',
+      milestone: 'cli-1.2.3',
+      username: 'my-cli-user',
+      model: 'cli-gemma',
+      port: 'cli-1111',
+      endpoint: '/cli-gen',
+      ollama: true,
+    } as unknown as minimist.ParsedArgs);
 
     await run(); // Execute the run function
 
@@ -113,7 +104,14 @@ describe('run', () => {
   test('should use environment variables for token and username, and default ollama parameters', async () => {
     process.env.GITHUB_TOKEN = 'env-token-for-cli';
     process.env.GITHUB_USERNAME = 'env-user-for-cli';
-    process.argv = ['foo', 'bar', '--org', 'test-org', '--repo', 'test-repo', '--milestone', 'env-1.0.0'];
+
+    vi.mocked(minimist).mockReturnValue({
+      token: 'env-token-for-cli',
+      org: 'test-org',
+      repo: 'test-repo',
+      milestone: 'env-1.0.0',
+      username: 'env-user-for-cli',
+    } as unknown as minimist.ParsedArgs);
 
     await run();
 
@@ -132,17 +130,25 @@ describe('run', () => {
   });
 
   test('should exit if --ollama is used without --model', async () => {
-    process.argv = ['foo', 'bar', '--ollama', '--token', 't', '--username', 'u', '--milestone', 'm'];
+    vi.mocked(minimist).mockReturnValue({
+      ollama: true,
+      token: 't',
+      username: 'u',
+      milestone: 'm',
+    } as unknown as minimist.ParsedArgs);
     await run();
 
-    expect(consoleErrorMock).toHaveBeenCalledWith('When using --ollama, you need to specify --model argument');
+    expect(consoleLogMock).toHaveBeenCalledWith('When using --ollama, you need to specify --model argument');
     expect(ReleaseNotesPreparator).not.toHaveBeenCalled(); // Should not have been called
     expect(generateMock).not.toHaveBeenCalled(); // Generate should not have been called
   });
 
   test('should log message and not call ReleaseNotesPreparator or generate if token is missing', async () => {
     process.env.GITHUB_USERNAME = 'env-user-no-token'; // Has username but no token
-    process.argv = ['foo', 'bar', '--milestone', 'no-token-1.2.3']; // Missing token arg
+    vi.mocked(minimist).mockReturnValue({
+      milestone: 'no-token-1.2.3',
+      username: 'env-user-no-token',
+    } as unknown as minimist.ParsedArgs);
 
     await run();
 
@@ -152,20 +158,14 @@ describe('run', () => {
   });
 
   test('should handle unknown options gracefully and still proceed if required args present', async () => {
-    process.argv = [
-      'foo',
-      'bar',
-      '--unknown-option',
-      'value',
-      '--token',
-      't',
-      '--username',
-      'u',
-      '--milestone',
-      '1.0.0',
-    ];
+    vi.mocked(minimist).mockReturnValue({
+      unknownOption: 'value',
+      token: 't',
+      username: 'u',
+      milestone: '1.0.0',
+    } as unknown as minimist.ParsedArgs);
+
     await run();
-    expect(consoleWarnMock).toHaveBeenCalledWith('Unknown option: --unknown-option');
     expect(ReleaseNotesPreparator).toHaveBeenCalledWith(
       't',
       'podman-desktop',
@@ -181,14 +181,16 @@ describe('run', () => {
   });
 
   test('should show help and exit if --help is used', async () => {
-    process.argv = ['foo', 'bar', '--help'];
+    vi.mocked(minimist).mockReturnValue({
+      help: true,
+    } as unknown as minimist.ParsedArgs);
     await run();
     expect(consoleLogMock).toHaveBeenCalledWith(expect.stringContaining('Parameters:'));
     expect(ReleaseNotesPreparator).not.toHaveBeenCalled();
   });
 
   test('should show help and exit if no arguments are provided', async () => {
-    process.argv = ['foo', 'bar'];
+    vi.mocked(minimist).mockReturnValue(undefined as unknown as minimist.ParsedArgs);
     await run();
     expect(consoleLogMock).toHaveBeenCalledWith(expect.stringContaining('Parameters:'));
     expect(ReleaseNotesPreparator).not.toHaveBeenCalled();

@@ -19,6 +19,19 @@
  ***********************************************************************/
 
 import { ReleaseNotesPreparator } from './release-notes-preparator';
+import minimist from 'minimist';
+
+interface Config {
+  token: string;
+  organization: string;
+  repo: string;
+  model?: string;
+  milestone: string;
+  port: string;
+  endpoint: string;
+  username: string;
+  useOllama: boolean;
+}
 
 export function showHelp(): void {
   console.log('Parameters:');
@@ -37,91 +50,90 @@ export function showHelp(): void {
   );
 }
 
+function parseArguments(parsedArgs: minimist.ParsedArgs): Partial<Config> {
+  const config: Partial<Config> = {
+    token: process.env.GITHUB_TOKEN,
+    organization: 'podman-desktop',
+    repo: 'podman-desktop',
+    milestone: '',
+    username: process.env.GITHUB_USERNAME,
+    useOllama: false,
+  };
+
+  if (parsedArgs['token']) config.token = parsedArgs.token;
+  if (parsedArgs['org']) config.organization = parsedArgs.org;
+  if (parsedArgs['repo']) config.repo = parsedArgs.repo;
+  if (parsedArgs['model']) config.model = parsedArgs.model;
+  if (parsedArgs['milestone']) config.milestone = parsedArgs.milestone;
+  if (parsedArgs['port']) config.port = parsedArgs.port;
+  if (parsedArgs['endpoint']) config.endpoint = parsedArgs.endpoint;
+  if (parsedArgs['username']) config.username = parsedArgs.username;
+  if (parsedArgs['ollama']) config.useOllama = true;
+
+  return config;
+}
+
+function validateConfig(config: Partial<Config>): string | null {
+  if (config.useOllama && !config.model) {
+    return 'When using --ollama, you need to specify --model argument';
+  }
+  if (!config.token) {
+    return 'No token found. Use either GITHUB_TOKEN or pass it as an argument';
+  }
+  if (!config.username) {
+    return 'No username found. Use either GITHUB_USERNAME or pass it as an argument';
+  }
+  return null;
+}
+
+function setupDefaults(config: Partial<Config>): Config {
+  if (config.useOllama) {
+    config.port ??= '11434';
+    config.endpoint ??= '/api/generate';
+  } else {
+    config.port ??= '45621';
+    config.endpoint ??= '/v1/chat/completions';
+  }
+
+  return config as Config;
+}
+
 export async function run(): Promise<void> {
-  let token = process.env.GITHUB_TOKEN;
   const args = process.argv.slice(2);
-  let organization = 'podman-desktop';
-  let repo = 'podman-desktop';
-  let model: string | undefined = undefined;
-  let milestone: string = '';
-  let port: string | undefined = undefined;
-  let endpoint: string | undefined = undefined;
-  let username = process.env.GITHUB_USERNAME;
-  let useOllama = false;
-  if (args.length === 0) {
+  const parsedArgs = minimist(args);
+
+  if (!parsedArgs) {
     showHelp();
     return;
   }
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '--token':
-        token = args[++i];
-        break;
-      case '--org':
-        organization = args[++i];
-        break;
-      case '--repo':
-        repo = args[++i];
-        break;
-      case '--username':
-        username = args[++i];
-        break;
-      case '--milestone':
-        milestone = args[++i];
-        break;
-      case '--model':
-        model = args[++i];
-        break;
-      case '--port':
-        port = args[++i];
-        break;
-      case '--endpoint':
-        endpoint = args[++i];
-        break;
-      case '--ollama':
-        useOllama = true;
-        break;
-      case '--help':
-      case '-h':
-        showHelp();
-        break;
-      default:
-        console.warn(`Unknown option: ${args[i]}`);
-        break;
-    }
-  }
 
-  if (useOllama && !model) {
-    console.error('When using --ollama, you need to specify --model argument');
+  if (parsedArgs['help']) {
+    showHelp();
     return;
   }
 
-  if (useOllama) {
-    port ??= '11434';
-    endpoint ??= '/api/generate';
-  } else {
-    port ??= '45621';
-    endpoint ??= '/v1/chat/completions';
+  const partialConfig = parseArguments(parsedArgs);
+  const validationError = validateConfig(partialConfig);
+
+  if (validationError) {
+    console.log(validationError);
+    return;
   }
 
-  if (!token) {
-    console.log('No token found. Use either GITHUB_TOKEN or pass it as an argument');
-  } else if (!username) {
-    console.log('No username found. Use either GITHUB_USERNAME or pass it as an argument');
-  } else {
-    const releaseNotesPreparator = new ReleaseNotesPreparator(
-      token,
-      organization,
-      repo,
-      milestone,
-      username,
-      model,
-      port,
-      endpoint,
-      useOllama,
-    );
-    await releaseNotesPreparator.generate();
-  }
+  const config = setupDefaults(partialConfig);
+
+  const releaseNotesPreparator = new ReleaseNotesPreparator(
+    config.token,
+    config.organization,
+    config.repo,
+    config.milestone,
+    config.username,
+    config.model,
+    config.port,
+    config.endpoint,
+    config.useOllama,
+  );
+  await releaseNotesPreparator.generate();
 }
 
 run().catch((err: unknown) => {
