@@ -50,6 +50,10 @@ export interface PRCategory {
   prs: PRInfo[];
 }
 
+export interface KeyValueNumber {
+  [key: string]: number;
+}
+
 export class ReleaseNotesPreparator {
   private octokit;
   constructor(
@@ -101,8 +105,8 @@ export class ReleaseNotesPreparator {
   }
 
   // Count all PRs in given milestone for each user
-  protected async getMilestonePRs(prs: Issue[]): Promise<{ [key: string]: number }> {
-    const result: { [key: string]: number } = {};
+  protected async getMilestonePRs(prs: Issue[]): Promise<KeyValueNumber> {
+    const result: KeyValueNumber = {};
     for (const issue of prs) {
       if (issue.pull_request) {
         const author = issue.user?.login;
@@ -115,22 +119,26 @@ export class ReleaseNotesPreparator {
     return result;
   }
 
-  protected async isNewContributor(username: string, contributorsMap, milestoneCommits): Promise<boolean> {
+  protected async isNewContributor(
+    username: string,
+    contributorsMap: KeyValueNumber,
+    milestoneCommits: KeyValueNumber,
+  ): Promise<boolean> {
     const totalCommits = contributorsMap[username] ?? 0;
     const milestoneCount = milestoneCommits[username] ?? 0;
     return totalCommits === milestoneCount && totalCommits > 0;
   }
 
   protected async getFirstTimeContributors(prs: Issue[]): Promise<PRInfo[]> {
-    const firstTimeContributorsMap: { [username: string]: PRInfo } = {};
-    // Get all contibutors in repo
+    const firstTimeContributorsMap: Record<string, PRInfo> = {};
+    // Get all contributors in repo
     const contributors = await this.octokit.rest.repos.listContributors({
       owner: this.organization,
       repo: this.repo,
       per_page: 100,
     });
 
-    const contributorsMap = contributors.data.reduce((acc: { [key: string]: number }, contributor) => {
+    const contributorsMap = contributors.data.reduce((acc: KeyValueNumber, contributor) => {
       if (contributor.login) {
         acc[contributor.login] = contributor.contributions;
       }
@@ -179,7 +187,7 @@ export class ReleaseNotesPreparator {
       repo,
     });
 
-    const milestone: Milestone = milestones.find(m => m.title === milestoneTitle);
+    const milestone = milestones.find(m => m.title === milestoneTitle);
     if (!milestone) {
       throw new Error(
         `Milestone '${milestoneTitle}' was not found in: [${milestones.map(milestone => milestone.title)}]`,
@@ -357,14 +365,14 @@ ${content}
     const issueMatch = pr.body?.match(/(Closes|Fixes)\s#\d+/i);
     if (!issueMatch) return pr;
 
-    const issueNumber = issueMatch[0].split('#')[1];
+    const issueNumber = parseInt(issueMatch[0].split('#')[1]);
     const response = await this.octokit.issues.get({
       owner,
       repo,
       issue_number: issueNumber,
     });
 
-    if (response?.data) return { ...pr, body: response.data.body + pr.body };
+    if (response?.data) return { ...pr, body: (response.data.body ?? '') + (pr.body ?? '') };
     return pr;
   }
 
@@ -375,8 +383,8 @@ ${content}
 
     for (let i = 0; i < prs.length; i++) {
       const pr = prs[i];
-      const match = pr.title.match(/^\s*(chore|feat|docs|fix|refactor|test|ci)/i);
-      if (!match) {
+      const match = /^\s*(chore|feat|docs|fix|refactor|test|ci)/i.exec(pr.title);
+      if (!match?.[1]) {
         // Skip others
         continue;
       }
@@ -388,8 +396,8 @@ ${content}
       let category = match[1].toLowerCase();
 
       // e.g. chore(test): or feat(tests):
-      const matchTest = pr.title.match(/\(test/i);
-      if (matchTest) {
+      const matchTest = /\(test/i.exec(pr.title);
+      if (matchTest?.[1]) {
         category = 'test';
       }
 
@@ -421,7 +429,8 @@ ${content}
     // Generating highlighted features
     prs = prs.map(pr => ({ ...pr, body: pr.body ? pr.body.replace(/### Screenshot \/ video of UI[\s\S]*/, '') : '' }));
     const features = prs.filter(
-      issue => issue.pull_request && ((issue.title.startsWith('feat') ? true : null) ?? issue.title.startsWith('chore')),
+      issue =>
+        issue.pull_request && ((issue.title.startsWith('feat') ? true : null) ?? issue.title.startsWith('chore')),
     );
     const content = features.map((pr, index) => `PR${index + 1}: ${pr.title} - ${pr.body}\n}`).join('');
 

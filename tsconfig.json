@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
+    "module": "NodeNext",
     "target": "esnext",
-    "module": "esnext",
-    "strict": true,
+    "sourceMap": false,
+    "moduleResolution": "node16",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "preserveValueImports": false,
+    "strict": true,
+    "isolatedModules": true,
+    "exactOptionalPropertyTypes": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"],
     "baseUrl": ".",
-    "allowJs": true,
-    "checkJs": true,
-    "types": ["@testing-library/jest-dom"]
   },
   "include": [
     "release-notes/*.ts",
