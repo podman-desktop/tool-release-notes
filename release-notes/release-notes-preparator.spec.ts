@@ -66,11 +66,26 @@ export class TestReleaseNotesPreparator extends ReleaseNotesPreparator {
     return super.fetchDataFromService(content);
   }
 
+  fetchDataFromClaude(content: string, prompt: string): Promise<HighlightedPR[]> {
+    return super.fetchDataFromClaude(content, prompt);
+  }
+
   includeDataFromIssue(owner: string, repo: string, pr: Issue): Promise<Issue> {
     return super.includeDataFromIssue(owner, repo, pr);
   }
 }
 
+const mockClaudeCreate = vi.fn();
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: vi.fn().mockImplementation(() => ({
+    messages: { create: mockClaudeCreate },
+  })),
+}));
+vi.mock('@anthropic-ai/vertex-sdk', () => ({
+  AnthropicVertex: vi.fn().mockImplementation(() => ({
+    messages: { create: mockClaudeCreate },
+  })),
+}));
 vi.mock('@octokit/rest');
 vi.mock('mustache');
 vi.mock('fs', async () => {
@@ -315,6 +330,80 @@ describe('ReleaseNotesPreparator', () => {
     test('should return empty array on HTTP error', async () => {
       fetchMock.mockResolvedValue({ ok: false, status: 500 });
       expect(await preparator.fetchDataFromService(content)).toEqual([]);
+    });
+  });
+
+  describe('fetchDataFromClaude', () => {
+    let claudePreparator: TestReleaseNotesPreparator;
+    const hlPRs = [{ title: 'HL1', shortDesc: 's', longDesc: 'l' }];
+
+    beforeEach(() => {
+      claudePreparator = new TestReleaseNotesPreparator(
+        mockToken,
+        mockOrg,
+        mockRepo,
+        mockMilestoneName,
+        mockUsername,
+        mockModel,
+        mockPort,
+        mockEndpoint,
+        false,
+        true,
+        'sk-ant-test-key',
+      );
+    });
+
+    test('should parse highlighted PRs from Claude response', async () => {
+      mockClaudeCreate.mockResolvedValue({
+        content: [{ type: 'text', text: JSON.stringify({ prs: hlPRs }) }],
+      });
+      const result = await claudePreparator.fetchDataFromClaude('PR content', 'prompt');
+      expect(result).toEqual(hlPRs);
+    });
+
+    test('should return empty array when Claude returns no text block', async () => {
+      mockClaudeCreate.mockResolvedValue({
+        content: [{ type: 'image', source: {} }],
+      });
+      const result = await claudePreparator.fetchDataFromClaude('PR content', 'prompt');
+      expect(result).toEqual([]);
+    });
+
+    test('should return empty array when Claude response has no JSON', async () => {
+      mockClaudeCreate.mockResolvedValue({
+        content: [{ type: 'text', text: 'no json here' }],
+      });
+      const result = await claudePreparator.fetchDataFromClaude('PR content', 'prompt');
+      expect(result).toEqual([]);
+    });
+
+    test('should return empty array on API error', async () => {
+      mockClaudeCreate.mockRejectedValue(new Error('API error'));
+      const result = await claudePreparator.fetchDataFromClaude('PR content', 'prompt');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('fetchDataFromService with Claude', () => {
+    test('should delegate to fetchDataFromClaude when useClaude is true', async () => {
+      const claudePreparator = new TestReleaseNotesPreparator(
+        mockToken,
+        mockOrg,
+        mockRepo,
+        mockMilestoneName,
+        mockUsername,
+        mockModel,
+        mockPort,
+        mockEndpoint,
+        false,
+        true,
+        'sk-ant-test-key',
+      );
+      const hlPRs = [{ title: 'HL1', shortDesc: 's', longDesc: 'l' }];
+      vi.spyOn(claudePreparator, 'fetchDataFromClaude').mockResolvedValue(hlPRs);
+      const result = await claudePreparator.fetchDataFromService('content');
+      expect(result).toEqual(hlPRs);
+      expect(claudePreparator.fetchDataFromClaude).toHaveBeenCalled();
     });
   });
 

@@ -31,6 +31,8 @@ interface Config {
   endpoint: string;
   username: string;
   useOllama: boolean;
+  useClaude: boolean;
+  anthropicKey?: string;
 }
 
 export function showHelp(): void {
@@ -43,6 +45,12 @@ export function showHelp(): void {
   console.log('--ollama - script will try to use ollama when model is provided');
   console.log(
     '--model - name of ollama model for generating highlited PRs e.g. gemma3:27b (before running this script run "ollama run gemma3:27b")',
+  );
+  console.log(
+    '--claude - use Claude (Anthropic) API for generating highlighted PRs. Supports direct API (ANTHROPIC_API_KEY) or Vertex AI (ANTHROPIC_VERTEX_PROJECT_ID + CLOUD_ML_REGION)',
+  );
+  console.log(
+    '--anthropic-key - Anthropic API key or export ANTHROPIC_API_KEY env variable (not needed when using Vertex AI)',
   );
   console.log('--port - port on which is service running');
   console.log(
@@ -58,6 +66,8 @@ function parseArguments(parsedArgs: minimist.ParsedArgs): Partial<Config> {
     milestone: '',
     username: process.env.GITHUB_USERNAME,
     useOllama: false,
+    useClaude: false,
+    anthropicKey: process.env.ANTHROPIC_API_KEY,
   };
 
   if (parsedArgs['token']) config.token = parsedArgs.token;
@@ -69,13 +79,27 @@ function parseArguments(parsedArgs: minimist.ParsedArgs): Partial<Config> {
   if (parsedArgs['endpoint']) config.endpoint = parsedArgs.endpoint;
   if (parsedArgs['username']) config.username = parsedArgs.username;
   if (parsedArgs['ollama']) config.useOllama = true;
+  if (parsedArgs['claude']) config.useClaude = true;
+  if (parsedArgs['anthropic-key']) config.anthropicKey = parsedArgs['anthropic-key'];
 
   return config;
 }
 
 function validateConfig(config: Partial<Config>): string | null {
+  if (config.useOllama && config.useClaude) {
+    return 'Cannot use both --ollama and --claude at the same time';
+  }
   if (config.useOllama && !config.model) {
     return 'When using --ollama, you need to specify --model argument';
+  }
+  const vertexRequested = !!process.env.CLAUDE_CODE_USE_VERTEX;
+  const vertexProjectId = !!process.env.ANTHROPIC_VERTEX_PROJECT_ID;
+  if (config.useClaude && vertexRequested && !vertexProjectId) {
+    return 'When using --claude with Vertex AI (enabled via CLAUDE_CODE_USE_VERTEX), you must set ANTHROPIC_VERTEX_PROJECT_ID environment variable';
+  }
+  const useVertex = vertexRequested || vertexProjectId;
+  if (config.useClaude && !config.anthropicKey && !useVertex) {
+    return 'When using --claude, you need to provide an Anthropic API key via --anthropic-key or ANTHROPIC_API_KEY, or enable Vertex AI via CLAUDE_CODE_USE_VERTEX and ANTHROPIC_VERTEX_PROJECT_ID (optionally CLOUD_ML_REGION, which defaults to us-east5)';
   }
   if (!config.token) {
     return 'No token found. Use either GITHUB_TOKEN or pass it as an argument';
@@ -132,6 +156,8 @@ export async function run(): Promise<void> {
     config.port,
     config.endpoint,
     config.useOllama,
+    config.useClaude,
+    config.anthropicKey,
   );
   await releaseNotesPreparator.generate();
 }

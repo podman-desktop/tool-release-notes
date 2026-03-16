@@ -19,6 +19,8 @@
 
 import * as fs from 'node:fs';
 
+import Anthropic from '@anthropic-ai/sdk';
+import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
 import type { components } from '@octokit/openapi-types';
 import { Octokit } from '@octokit/rest';
 import mustache from 'mustache';
@@ -66,6 +68,8 @@ export class ReleaseNotesPreparator {
     private port: string,
     private endpoint: string,
     private useOllama: boolean,
+    private useClaude: boolean = false,
+    private anthropicKey: string = '',
   ) {
     this.octokit = new Octokit({ auth: token });
   }
@@ -224,6 +228,62 @@ export class ReleaseNotesPreparator {
     return prs;
   }
 
+  protected async fetchDataFromClaude(_content: string, prompt: string): Promise<HighlightedPR[]> {
+    const vertexProjectId = process.env.ANTHROPIC_VERTEX_PROJECT_ID;
+    if (process.env.CLAUDE_CODE_USE_VERTEX && !vertexProjectId) {
+      throw new Error(
+        'CLAUDE_CODE_USE_VERTEX is set but ANTHROPIC_VERTEX_PROJECT_ID is not defined. ' +
+          'Please set ANTHROPIC_VERTEX_PROJECT_ID to a valid Vertex AI project ID or unset CLAUDE_CODE_USE_VERTEX.',
+      );
+    }
+    const useVertex = !!process.env.CLAUDE_CODE_USE_VERTEX || !!vertexProjectId;
+
+    const client = useVertex
+      ? new AnthropicVertex({
+          projectId: vertexProjectId,
+          region: process.env.CLOUD_ML_REGION ?? 'us-east5',
+        })
+      : new Anthropic({ apiKey: this.anthropicKey });
+
+    const defaultModel = useVertex ? 'claude-sonnet-4@20250514' : 'claude-sonnet-4-20250514';
+
+    try {
+      const message = await client.messages.create({
+        model: this.model ?? defaultModel,
+        max_tokens: 4096,
+        system:
+          'You are a helpful assistant that returns only JSON containing exactly a property "prs", which is an array of objects described in the prompt. In the response, don\'t address the content as "This PR" etc.; address it as if it is a feature or fix.',
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
+
+      const textBlock = message.content.find(block => block.type === 'text');
+      if (!textBlock || textBlock.type !== 'text') {
+        console.error('No text response from Claude');
+        return [];
+      }
+
+      const jsonStart = textBlock.text.indexOf('{');
+      const jsonEnd = textBlock.text.lastIndexOf('}');
+      const jsonMatch = jsonStart !== -1 && jsonEnd > jsonStart ? [textBlock.text.slice(jsonStart, jsonEnd + 1)] : null;
+      if (!jsonMatch) {
+        console.error('Could not extract JSON from Claude response');
+        return [];
+      }
+
+      return JSON.parse(jsonMatch[0]).prs as HighlightedPR[];
+    } catch (e: unknown) {
+      console.error(
+        `Got error ${e}.\nThere was a problem when generating highlighted PRs with Claude. Generating release notes without highlights.`,
+      );
+      return [];
+    }
+  }
+
   protected async fetchDataFromService(content: string): Promise<HighlightedPR[]> {
     const schema = {
       type: 'object',
@@ -293,6 +353,10 @@ Here are a few examples of the expected output format:
 DATA:
 ${content}
 `;
+    if (this.useClaude) {
+      return this.fetchDataFromClaude(content, prompt);
+    }
+
     let body;
     if (this.useOllama) {
       body = {
