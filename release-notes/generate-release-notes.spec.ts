@@ -96,6 +96,8 @@ describe('run', () => {
       'cli-1111', // port
       '/cli-gen', // endpoint
       true, // useOllama
+      false, // useClaude
+      undefined, // anthropicKey
     );
 
     expect(generateMock).toHaveBeenCalledTimes(1);
@@ -125,6 +127,8 @@ describe('run', () => {
       '45621', // port (default for non-ollama)
       '/v1/chat/completions', // endpoint (default for non-ollama)
       false, // useOllama (default)
+      false, // useClaude (default)
+      undefined, // anthropicKey
     );
     expect(generateMock).toHaveBeenCalled();
   });
@@ -175,7 +179,9 @@ describe('run', () => {
       undefined,
       '45621',
       '/v1/chat/completions',
-      false,
+      false, // useOllama
+      false, // useClaude
+      undefined, // anthropicKey
     );
     expect(generateMock).toHaveBeenCalled();
   });
@@ -193,6 +199,70 @@ describe('run', () => {
     vi.mocked(minimist).mockReturnValue(undefined as unknown as minimist.ParsedArgs);
     await run();
     expect(consoleLogMock).toHaveBeenCalledWith(expect.stringContaining('Parameters:'));
+    expect(ReleaseNotesPreparator).not.toHaveBeenCalled();
+  });
+
+  test('should pass claude options to ReleaseNotesPreparator', async () => {
+    vi.mocked(minimist).mockReturnValue({
+      token: 'my-token',
+      username: 'my-user',
+      milestone: '2.0.0',
+      claude: true,
+      'anthropic-key': 'sk-ant-test-key',
+    } as unknown as minimist.ParsedArgs);
+
+    await run();
+
+    expect(ReleaseNotesPreparator).toHaveBeenCalledWith(
+      'my-token',
+      'podman-desktop',
+      'podman-desktop',
+      '2.0.0',
+      'my-user',
+      undefined,
+      '45621',
+      '/v1/chat/completions',
+      false,
+      true,
+      'sk-ant-test-key',
+    );
+    expect(generateMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('should fail if --claude is used without API key or Vertex config', async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.CLAUDE_CODE_USE_VERTEX;
+    delete process.env.ANTHROPIC_VERTEX_PROJECT_ID;
+
+    vi.mocked(minimist).mockReturnValue({
+      claude: true,
+      token: 't',
+      username: 'u',
+      milestone: 'm',
+    } as unknown as minimist.ParsedArgs);
+
+    await run();
+
+    expect(consoleLogMock).toHaveBeenCalledWith(
+      expect.stringContaining('When using --claude, you need to provide an Anthropic API key'),
+    );
+    expect(ReleaseNotesPreparator).not.toHaveBeenCalled();
+  });
+
+  test('should fail if both --ollama and --claude are used', async () => {
+    vi.mocked(minimist).mockReturnValue({
+      ollama: true,
+      claude: true,
+      model: 'some-model',
+      'anthropic-key': 'sk-ant-test',
+      token: 't',
+      username: 'u',
+      milestone: 'm',
+    } as unknown as minimist.ParsedArgs);
+
+    await run();
+
+    expect(consoleLogMock).toHaveBeenCalledWith('Cannot use both --ollama and --claude at the same time');
     expect(ReleaseNotesPreparator).not.toHaveBeenCalled();
   });
 });
