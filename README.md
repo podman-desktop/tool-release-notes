@@ -31,6 +31,13 @@ $ export ANTHROPIC_API_KEY=sk-ant-your-key
 $ pnpm generate --claude --username foo --milestone 1.20.0 --token github_token_foo_bar
 ```
 
+- You can also specify a model with `--model` (defaults to `claude-sonnet-4-20250514`). See [available models](https://docs.anthropic.com/en/docs/about-claude/models).
+
+```
+$ export ANTHROPIC_API_KEY=sk-ant-your-key
+$ pnpm generate --claude --username foo --milestone 1.20.0 --model claude-sonnet-4-20250514 --token github_token_foo_bar
+```
+
 4. Generate release notes using Claude via Vertex AI
 
 ```
