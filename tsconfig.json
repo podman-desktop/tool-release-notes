@@ -13,7 +13,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": ["node"],
-    "baseUrl": ".",
   },
   "include": [
     "release-notes/*.ts",
