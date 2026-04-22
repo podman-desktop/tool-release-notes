@@ -12,10 +12,7 @@
     "exactOptionalPropertyTypes": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"],
+    "types": ["node"]
   },
-  "include": [
-    "release-notes/*.ts",
-    "types/*.d.ts",
-  ]
+  "include": ["release-notes/*.ts", "types/*.d.ts"]
 }

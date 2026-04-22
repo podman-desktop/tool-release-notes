@@ -6,9 +6,7 @@
   },
   "files": {
     "maxSize": 1600000,
-    "ignore": [
-      "release-notes/**"
-    ]
+    "includes": ["**", "!**/release-notes/**"]
   },
   "javascript": {
     "formatter": {
@@ -31,7 +29,5 @@
   "linter": {
     "enabled": true
   },
-  "organizeImports": {
-    "enabled": false
-  }
+  "assist": { "actions": { "source": { "organizeImports": "off" } } }
 }
