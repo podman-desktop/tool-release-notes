@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import minimist from 'minimist';
 
 import { run } from './generate-release-notes';
@@ -37,13 +37,9 @@ vi.mock('minimist', () => ({
   default: vi.fn(),
 }));
 
-beforeAll(() => {
-  vi.mock('./release-notes-preparator', () => {
-    return {
-      ReleaseNotesPreparator: vi.fn(),
-    };
-  });
-});
+vi.mock('./release-notes-preparator', () => ({
+  ReleaseNotesPreparator: vi.fn(),
+}));
 
 beforeEach(() => {
   vi.resetAllMocks();

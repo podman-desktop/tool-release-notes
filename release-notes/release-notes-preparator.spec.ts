@@ -18,6 +18,8 @@
 
 import * as fsOriginal from 'node:fs';
 
+import Anthropic from '@anthropic-ai/sdk';
+import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
 import type { components } from '@octokit/openapi-types';
 import { Octokit, RestEndpointMethodTypes } from '@octokit/rest';
 import mustache from 'mustache';
@@ -77,16 +79,14 @@ export class TestReleaseNotesPreparator extends ReleaseNotesPreparator {
 
 const mockClaudeCreate = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockClaudeCreate },
-  })),
+  default: vi.fn(class {}),
 }));
 vi.mock('@anthropic-ai/vertex-sdk', () => ({
-  AnthropicVertex: vi.fn().mockImplementation(() => ({
-    messages: { create: mockClaudeCreate },
-  })),
+  AnthropicVertex: vi.fn(class {}),
 }));
-vi.mock('@octokit/rest');
+vi.mock('@octokit/rest', () => ({
+  Octokit: vi.fn(class {}),
+}));
 vi.mock('mustache');
 vi.mock('fs', async () => {
   const actualFs = await vi.importActual<typeof fsOriginal>('fs');
@@ -164,7 +164,7 @@ const mockModel = 'test-model';
 const mockPort = '12345';
 const mockEndpoint = '/api/test';
 
-const mockOctokitInstance: Octokit = {
+const mockOctokitInstance = {
   rest: {
     issues: { listMilestones: vi.fn(), listForRepo: vi.fn(), get: vi.fn() },
     repos: { listContributors: vi.fn() },
@@ -172,9 +172,12 @@ const mockOctokitInstance: Octokit = {
   issues: {
     get: vi.fn(),
   },
-} as unknown as Octokit;
+};
 
-vi.mocked(Octokit).mockImplementation(() => mockOctokitInstance);
+(Octokit.prototype as unknown as Record<string, unknown>).rest = mockOctokitInstance.rest;
+(Octokit.prototype as unknown as Record<string, unknown>).issues = mockOctokitInstance.issues;
+(Anthropic.prototype as unknown as Record<string, unknown>).messages = { create: mockClaudeCreate };
+(AnthropicVertex.prototype as unknown as Record<string, unknown>).messages = { create: mockClaudeCreate };
 
 beforeEach(() => {
   vi.clearAllMocks();
