@@ -8,7 +8,7 @@
     "test": "vitest --run --passWithNoTests",
     "test:coverage": "pnpm run test --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "format:check": "biome format --check && prettier --cache --check \"release-notes/**/*.ts\"",
+    "format:check": "biome format && prettier --cache --check \"release-notes/**/*.ts\"",
     "format:clean": "rimraf node_modules/.cache/prettier",
     "format:fix": "biome format --write && prettier --cache --write \"release-notes/**/*.ts\"",
     "lint:clean": "rimraf .eslintcache",
@@ -28,7 +28,6 @@
     "@types/minimist": "^1.2.5",
     "@typescript-eslint/parser": "^8.59.0",
     "@vitest/eslint-plugin": "^1.6.16",
-    "biome": "^0.3.3",
     "eslint": "^10.2.1",
     "eslint-plugin-etc": "^2.0.3",
     "eslint-plugin-file-progress": "^3.0.2",
@@ -48,6 +47,7 @@
     "vitest": "^4.1.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@types/mustache": "^4.2.6",
