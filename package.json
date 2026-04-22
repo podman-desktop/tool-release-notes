@@ -60,6 +60,11 @@
     "minimist": "^1.2.8",
     "typescript": "^5.9.3"
   },
+  "pnpm": {
+    "overrides": {
+      "form-data@<2.5.4": "2.5.4"
+    }
+  },
   "lint-staged": {
     "*.{js,ts,tsx,svelte}": [
       "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --fix",
