@@ -12,8 +12,8 @@ importers:
         specifier: ^0.78.0
         version: 0.78.0
       '@anthropic-ai/vertex-sdk':
-        specifier: ^0.14.4
-        version: 0.14.4
+        specifier: ^0.16.0
+        version: 0.16.0
       '@eslint/compat':
         specifier: ^2.0.5
         version: 2.0.5(eslint@9.31.0(jiti@2.6.0))
@@ -139,8 +139,8 @@ packages:
       zod:
         optional: true
 
-  '@anthropic-ai/vertex-sdk@0.14.4':
-    resolution: {integrity: sha512-BZUPRWghZxfSFtAxU563wH+jfWBPoedAwsVxG35FhmNsjeV8tyfN+lFriWhCpcZApxA4NdT6Soov+PzfnxxD5g==}
+  '@anthropic-ai/vertex-sdk@0.16.0':
+    resolution: {integrity: sha512-ntxemtRkwPsjVzGQJsmBPRW38tfas6VuVlD1v6pHffDJKLPtCdaiN9KUQeraJ/F34tjxEWlsaCnl3t/orJm1Xw==}
 
   '@asamuzakjp/css-color@4.1.2':
     resolution: {integrity: sha512-NfBUvBaYgKIuq6E/RBLY1m0IohzNHAYyaJGuTK79Z23uNwmz2jl1mPsC5ZxCCxylinKhT1Amn5oNTlx1wN8cQg==}
@@ -3741,7 +3741,7 @@ snapshots:
     dependencies:
       json-schema-to-ts: 3.1.1
 
-  '@anthropic-ai/vertex-sdk@0.14.4':
+  '@anthropic-ai/vertex-sdk@0.16.0':
     dependencies:
       '@anthropic-ai/sdk': 0.78.0
       google-auth-library: 9.15.1
