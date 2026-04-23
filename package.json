@@ -30,7 +30,7 @@
     "@vitest/eslint-plugin": "^1.6.16",
     "eslint": "^10.2.1",
     "eslint-plugin-etc": "^2.0.3",
-    "eslint-plugin-file-progress": "^3.0.2",
+    "eslint-plugin-file-progress": "^4.0.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-no-null": "^1.0.2",
     "eslint-plugin-redundant-undefined": "^1.0.0",
