@@ -27,7 +27,7 @@
     "@octokit/rest": "^22.0.1",
     "@types/minimist": "^1.2.5",
     "@typescript-eslint/parser": "^8.59.1",
-    "@vitest/eslint-plugin": "^1.6.16",
+    "@vitest/eslint-plugin": "^1.6.17",
     "eslint": "^10.2.1",
     "eslint-plugin-etc": "^2.0.3",
     "eslint-plugin-file-progress": "^4.0.0",
