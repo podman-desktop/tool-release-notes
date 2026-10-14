@@ -23,8 +23,8 @@ importers:
   .:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.132.1
-        version: 0.132.1
+        specifier: ^0.133.0
+        version: 0.133.0
       '@anthropic-ai/vertex-sdk':
         specifier: ^0.20.4
         version: 0.20.4
@@ -140,8 +140,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.132.1':
-    resolution: {integrity: sha512-Dg+Rd0effi+4FyNwgEx6JXl9COefsZ3C7BOPSKYIWboQOEIi9HXtu1WBdND0DIgMF7Qt1vuCSjsbs7sjUkzJuQ==}
+  '@anthropic-ai/sdk@0.133.0':
+    resolution: {integrity: sha512-jlqUN8p8ESTJj+GJnA4KjzbEfF1waEoGzRT8jwytlYGFFgv+/DUQOxlYGvYw10UzhD1kwLqYzxvA3FrTB2YWuQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -3083,14 +3083,14 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.132.1':
+  '@anthropic-ai/sdk@0.133.0':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
 
   '@anthropic-ai/vertex-sdk@0.20.4':
     dependencies:
-      '@anthropic-ai/sdk': 0.132.1
+      '@anthropic-ai/sdk': 0.133.0
       google-auth-library: 10.9.1
     transitivePeerDependencies:
       - supports-color
