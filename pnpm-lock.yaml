@@ -26,8 +26,8 @@ importers:
         specifier: ^0.135.0
         version: 0.135.0
       '@anthropic-ai/vertex-sdk':
-        specifier: ^0.20.4
-        version: 0.20.4
+        specifier: ^0.21.0
+        version: 0.21.0
       '@eslint/compat':
         specifier: ^2.1.1
         version: 2.1.1(eslint@10.12.0(jiti@2.6.1))
@@ -149,8 +149,8 @@ packages:
       zod:
         optional: true
 
-  '@anthropic-ai/vertex-sdk@0.20.4':
-    resolution: {integrity: sha512-FYVOr6v/u1O7lIKdvoLPj7cKgMZEvZrZkjFjSFgozzHk5Ic/mB//R3Q/4dujPdLmXlb44Ph6CmkKZiUCa/1Z8Q==}
+  '@anthropic-ai/vertex-sdk@0.21.0':
+    resolution: {integrity: sha512-+l+I2QGfkROJMsK8fU3C8b+cwBYebDYBMLytpHkkWo4a9XhF2uRbWHpz9nm9UpSU0UB6lIrXyvcTTsD/MH2dPQ==}
 
   '@asamuzakjp/css-color@4.1.2':
     resolution: {integrity: sha512-NfBUvBaYgKIuq6E/RBLY1m0IohzNHAYyaJGuTK79Z23uNwmz2jl1mPsC5ZxCCxylinKhT1Amn5oNTlx1wN8cQg==}
@@ -3093,9 +3093,10 @@ snapshots:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
 
-  '@anthropic-ai/vertex-sdk@0.20.4':
+  '@anthropic-ai/vertex-sdk@0.21.0':
     dependencies:
       '@anthropic-ai/sdk': 0.135.0
+      '@opentelemetry/api': 1.9.1
       google-auth-library: 10.9.1
     transitivePeerDependencies:
       - supports-color
