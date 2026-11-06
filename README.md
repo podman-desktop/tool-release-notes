@@ -1,5 +1,12 @@
 # Podman Desktop tool-release-notes
 
+> [!WARNING]
+> **This repository is archived and no longer maintained.**
+> Release notes are now generated with the `release-notes` agent skill in the Podman Desktop repository:
+> [`.agents/skills/release-notes`](https://github.com/podman-desktop/podman-desktop/tree/main/.agents/skills/release-notes)
+> (added in [podman-desktop/podman-desktop#19586](https://github.com/podman-desktop/podman-desktop/pull/19586)).
+> See also [RELEASE.md](https://github.com/podman-desktop/podman-desktop/blob/main/RELEASE.md).
+
 Tool to automate the creation of Release Notes for Podman Desktop
 
 ## Usage
